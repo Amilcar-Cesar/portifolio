@@ -1,0 +1,39 @@
+# API bancária minimalista construída em Flask
+
+## O problema
+APIs bancárias precisam garantir transações de movimentação de dinheiro seguras, consistentes e sem falhas de concorrência (como saques duplicados simultâneos). O objetivo principal deste projeto foi construir uma API demonstrativa, estruturada sob o padrão arquitetural MVC (Model-View-Controller), para lidar com abertura de contas, consulta de saldo, extratos e saques de forma confiável e protegida.
+
+
+## Stack tecnológica e decisões
+- **Flask**: Microframework Python escolhido pela leveza e flexibilidade, ideal para estruturar a arquitetura MVC sob medida sem acoplamento desnecessário.
+- **SQLAlchemy (ORM)**: Para abstração segura da camada de dados e garantia do uso correto de transações do banco de dados (commit/rollback).
+- **MySQL**: Banco de dados relacional robusto para garantir a conformidade com as regras ACID essenciais para o domínio financeiro.
+- **Docker**: Conteinerização de toda a aplicação (API Flask + Banco de dados MySQL) garantindo portabilidade absoluta e facilidade de setup em qualquer ambiente local.
+
+## Desafio técnico e solução
+**O desafio: prevenção de saldo negativo devido a saques simultâneos concorrentes**
+Se um usuário fizer duas requisições de saque simultâneas muito próximas, ambas podem ler o saldo ao mesmo tempo, verificar que há saldo suficiente, e aprovar ambas as requisições, deixando a conta com saldo negativo.
+
+**A solução:**
+Utilização de **bloqueio pessimista (select for update)** via SQLAlchemy para bloquear a linha da conta no banco de dados durante a leitura e atualização do saldo de forma atômica.
+
+```python
+# controller/conta_controller.py
+from models.conta import Conta
+from database import db
+
+def realizar_saque(conta_id, valor):
+    # Inicia transação explícita com bloqueio de linha (pessimistic lock)
+    conta = db.session.query(Conta).filter_by(id=conta_id).with_for_update().first()
+    
+    if not conta:
+        raise ValueError("Conta não encontrada.")
+        
+    if conta.saldo < valor:
+        raise ValueError("Saldo insuficiente.")
+        
+    conta.saldo -= valor
+    db.session.commit() # O bloqueio é liberado no commit
+    return conta.saldo
+```
+Isso garante a segurança física do saldo, uma vez que a segunda requisição ficará aguardando na fila do banco de dados até que a primeira complete e atualize o saldo real, rejeitando o segundo saque por falta de fundos.

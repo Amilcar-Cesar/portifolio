@@ -1,0 +1,60 @@
+## Visão Geral & Propósito
+
+O **Máximo Respeito** é um e-commerce de roupas construído sob uma arquitetura de **Monorepo**, combinando uma experiência de compra ágil no frontend com um backend escalável e serverless em TypeScript. A aplicação conecta o catálogo de produtos, gerenciamento de estoque por variância e fluxo de checkout com alta velocidade de carregamento e baixíssimo custo operacional.
+
+---
+
+## Arquitetura Jamstack & Monorepo
+
+O sistema é dividido em dois workspaces principais (`apps/web` para o cliente e `apps/api` para o servidor HTTP), reutilizando o código do backend para execução local ou empacotado como uma função Serverless no Netlify.
+
+---
+
+## Demonstração da Interface
+
+Explore abaixo as principais telas e fluxos de trabalho construídos na plataforma:
+
+<ProjectGallery />
+
+---
+
+## Stack Tecnológica & Decisões de Engenharia
+
+### 1. Frontend (`apps/web`)
+- **Vite + React Router**: Roteamento reativo no cliente com tempo de carregamento e inicialização quase instantâneos.
+- **TanStack Query (React Query)**: Gerenciamento inteligente de estado assíncrono, cache com invalidação automática ao alterar o carrinho e re-fetch otimizado dos dados de produtos.
+
+### 2. Backend Serverless (`apps/api`)
+- **Node.js + Express + TypeScript**: Desenvolvimento de uma API RESTful estritamente tipada para controle de catálogo, produtos, variações e processamento de pedidos.
+- **Netlify Function Adapter**: Em ambiente de produção no Netlify, a aplicação Express completa roda envelopada dentro de uma única Netlify Function (`netlify/functions/api.ts`), garantindo zero custo fixo de infraestrutura mantendo 100% do código da API reaproveitado.
+
+### 3. Persistência & Segurança (Supabase)
+- **Supabase PostgreSQL**: Banco de dados relacional configurado com schema estruturado (`supabase/schema/schema.sql`) para catálogo e categorias.
+- **Isolamento de Credenciais**: A API realiza a leitura e gravação no banco utilizando `@supabase/supabase-js` com a `SUPABASE_SERVICE_ROLE_KEY` exclusiva no lado do servidor. O frontend nunca tem acesso a essa chave, garantindo total proteção das regras de negócio e bypass seguro do RLS quando necessário.
+
+---
+
+## Organização do Monorepo & Deploy
+
+### Estrutura de Scripts e Workspaces
+O projeto utiliza **NPM Workspaces** para gerenciar dependências e execução isolada ou unificada:
+
+```bash
+# Instalação das dependências globais
+npm install
+
+# Desenvolvimento local unificado (API + Web simultâneos)
+npm run dev
+
+# Emulação local do ambiente Serverless (Netlify Functions)
+npm run dev:netlify
+
+# Verificação estática de tipos por workspace
+npm run typecheck --workspace @maximo/api
+npm run typecheck --workspace @maximo/web
+```
+
+### Configuração de Deploy (Netlify)
+A integração contínua é definida através do arquivo `netlify.toml` na raiz do projeto:
+- **Proxy `/api/*`**: Redirecionamento transparente de requisições do frontend para a Netlify Function sem necessidade de URLs absolutas no código ou problemas de CORS.
+- **Gestão de Segredos**: Variáveis de ambiente configuradas no painel do Netlify (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_TOKEN_SECRET`).

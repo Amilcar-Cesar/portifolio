@@ -1,0 +1,67 @@
+## O Desafio e Propósito
+
+Clínicas de saúde frequentemente enfrentam gargalos como agendamentos fragmentados, falta de rastreamento no histórico de pacientes e prontuários médicos desconectados. O **Fisiovita** foi idealizado e construído para resolver essas dores através de uma arquitetura segura, escalável e intuitiva, conectando a recepção, o corpo clínico e a administração em um único ambiente.
+
+## Habilidades e Competências Trabalhadas
+
+O desenvolvimento do Fisiovita envolveu a aplicação prática de conceitos avançados de engenharia de software e desenvolvimento fullstack:
+
+- **Arquitetura de API em Camadas (Clean Architecture)**: Organização do backend FastAPI em camadas bem delimitadas (*routers*, *services*, *repositories*, *models*), garantindo facilidade de manutenção e desacoplamento de código.
+- **Controle de Acessos Granular (RBAC)**: Modelagem e implementação de autorizações por perfil (`admin`, `staff`, `manager`, `professional`), garantindo que cada usuário acesse estritamente as funcionalidades permitidas para sua função.
+- **Engenharia de Prontuário Eletrônico (PEP)**: Estruturação do histórico de pacientes com suporte a registro de anamnese inicial, associação com diagnósticos CID e evolução clínica por sessão de fisioterapia.
+- **Frontend Responsivo e Reativo (React + Vite)**: Desenvolvimento de uma interface dinâmica em TypeScript com controle de estado cliente, consumo eficiente de APIs assíncronas e formulários com validações em tempo real.
+- **Segurança da Informação e Persistência Cloud**: Integração com **Supabase (PostgreSQL)** para persistência resiliente, suporte a autenticação por JWT, políticas de CORS, rate-limiting e proteção contra requisições maliciosas.
+- **Inicialização Orientada (Bootstrap Flow)**: Implementação de um mecanismo inteligente no backend que detecta a ausência de master admin no primeiro boot e guia a criação segura da conta administradora inicial.
+
+---
+
+## Demonstração da Interface
+
+Explore abaixo as principais telas e fluxos de trabalho construídos no sistema:
+
+<ProjectGallery />
+
+---
+
+## Módulos Funcionais do Sistema
+
+### 1. Painel da Recepção & Atendimento (`staff`)
+- Visão diária consolidada de consultas agendadas, total de pacientes cadastrados e contagem de presença em tempo real.
+- Busca ágil de pacientes por Nome, CPF ou ID com ações imediatas para confirmação de presença.
+
+### 2. Painel Fisioterapêutico & Prontuário (`professional`)
+- Registro completo da evolução clínica do paciente a cada atendimento.
+- Inclusão de anamnese inicial, diagnósticos fisioterapêuticos codificados (CID) e linha do tempo de atendimentos anteriores.
+
+### 3. Central de Gestão Administrativa (`admin` & `manager`)
+- Gerenciamento multi-clínica com troca de contexto em tempo real.
+- Gestão completa de usuários, concessão de privilégios e manutenção do catálogo global de especialidades médicas.
+
+---
+
+## Destaques de Arquitetura & Boas Práticas
+
+- **Validação Estrita de Dados**: Uso de schemas **Pydantic** no backend e validações estruturadas no frontend para eliminar entradas inconsistentes antes de atingirem o banco de dados.
+- **Documentação Viva da API**: O backend expõe automaticamente a especificação OpenAPI interativa nas rotas `/docs` (Swagger UI) e `/redoc`.
+- **Monitoramento de Saúde**: Disponibilização do endpoint `/health` para verificação de disponibilidade e integração simplificada com serviços de deploy contínuo (CI/CD e Kubernetes).
+
+---
+
+## Como Executar Localmente
+
+### Backend (FastAPI)
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+*Também executável via Docker através do `backend/Dockerfile`.*
+
+### Frontend (React + Vite)
+```bash
+cd frontend
+npm install
+npm run dev
+```
