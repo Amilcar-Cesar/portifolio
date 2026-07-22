@@ -37,6 +37,13 @@ const courierPrime = Courier_Prime({
 export const metadata: Metadata = {
   title: "Amilcar | Desenvolvedor Backend",
   description: "Portfólio pessoal e estudos de caso técnicos destacando arquitetura, desenvolvimento backend e sistemas limpos de alta performance.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
