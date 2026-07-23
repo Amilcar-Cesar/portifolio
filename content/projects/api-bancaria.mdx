@@ -1,39 +1,77 @@
-# API bancária minimalista construída em Flask
+# API bancária minimalista em Python
 
-## O problema
-APIs bancárias precisam garantir transações de movimentação de dinheiro seguras, consistentes e sem falhas de concorrência (como saques duplicados simultâneos). O objetivo principal deste projeto foi construir uma API demonstrativa, estruturada sob o padrão arquitetural MVC (Model-View-Controller), para lidar com abertura de contas, consulta de saldo, extratos e saques de forma confiável e protegida.
+Uma API bancária minimalista escrita em Python, criada como projeto de estudo e aplicação de portfólio. O objetivo principal é demonstrar organização em arquitetura MVC, clareza no design de código e a capacidade de implementar operações bancárias básicas (criação de contas, listagem, saques e extratos) usando MySQL como persistência principal.
 
+> **Status:** Projeto de estudo / portfólio — não destinado a produção.
+
+## Visão Geral & Propósito
+- **Propósito:** Exibir habilidades de arquitetura, organização de código e testes básicos.
+- **Arquitetura:** Model-View-Controller (MVC) com inversão de dependência através de interfaces.
+- **Persistência:** MySQL (container local via `docker-compose.yml` / esquema em `init/schema.sql`).
+- **Operações básicas:** Criação de contas, listagem, saques e extratos.
 
 ## Stack tecnológica e decisões
-- **Flask**: Microframework Python escolhido pela leveza e flexibilidade, ideal para estruturar a arquitetura MVC sob medida sem acoplamento desnecessário.
-- **SQLAlchemy (ORM)**: Para abstração segura da camada de dados e garantia do uso correto de transações do banco de dados (commit/rollback).
-- **MySQL**: Banco de dados relacional robusto para garantir a conformidade com as regras ACID essenciais para o domínio financeiro.
-- **Docker**: Conteinerização de toda a aplicação (API Flask + Banco de dados MySQL) garantindo portabilidade absoluta e facilidade de setup em qualquer ambiente local.
+- **Python**: Linguagem principal para estruturar a arquitetura MVC de forma modular e testável.
+- **Interfaces & Inversão de Dependência**: Uso de interfaces abstratas para desacoplar a camada de controller da persistência MySQL.
+- **MySQL & SQLAlchemy**: Banco relacional para persistência dos dados de clientes e saldos com esquema em `init/schema.sql`.
+- **Docker & Docker Compose**: Conteinerização da aplicação e banco de dados via `docker-compose.yml`.
 
-## Desafio técnico e solução
-**O desafio: prevenção de saldo negativo devido a saques simultâneos concorrentes**
-Se um usuário fizer duas requisições de saque simultâneas muito próximas, ambas podem ler o saldo ao mesmo tempo, verificar que há saldo suficiente, e aprovar ambas as requisições, deixando a conta com saldo negativo.
+## Lógica de Negócio e Validações
 
-**A solução:**
-Utilização de **bloqueio pessimista (select for update)** via SQLAlchemy para bloquear a linha da conta no banco de dados durante a leitura e atualização do saldo de forma atômica.
+### O desafio: garantia de regras de negócio e tratamento de erros
+Em operações bancárias básicas de saque e extrato, é essencial validar a existência do cliente, verificar se há saldo suficiente, impedir saques com valores negativos ou nulos e aplicar o limite máximo permitido por transação, retornando erros HTTP apropriados caso qualquer regra seja violada.
+
+### A solução: validações modulares em Controller com exceções HTTP
+Implementação da classe `CpfSaqueExtratoController` desacoplada do repositório por meio da interface `CpfRepositoryInterface`. O fluxo de saque realiza validações isoladas e lança exceções HTTP customizadas (`HttpNotFound`, `HttpForbidden`, `HttpBadRequest`):
 
 ```python
-# controller/conta_controller.py
-from models.conta import Conta
-from database import db
+from src.models.mysql.interface.cpf_repository import CpfRepositoryInterface
+from src.controller.interface.cliente_interface import ClienteInterface
+from src.errors.types.http_not_found import HttpNotFound
+from src.errors.types.http_bad_request import HttpBadRequest
+from src.errors.types.http_forbiden import HttpForbidden
 
-def realizar_saque(conta_id, valor):
-    # Inicia transação explícita com bloqueio de linha (pessimistic lock)
-    conta = db.session.query(Conta).filter_by(id=conta_id).with_for_update().first()
-    
-    if not conta:
-        raise ValueError("Conta não encontrada.")
+class CpfSaqueExtratoController(ClienteInterface):
+    def __init__(self, cpf_repository: CpfRepositoryInterface) -> None:
+        self.__cpf_repository = cpf_repository
+
+    def saque(self, cliente_id: int, valor_saque: float) -> dict:
+        self.__validar_cliente(cliente_id)
+        saldo_result = self.__saldo_suficiente(cliente_id, valor_saque)
+        self.__limite_saque(valor_saque)
+
+        novo_saldo = saldo_result["novo_saldo"]
+        self.__cpf_repository.atualizar_saldo(cliente_id, novo_saldo)
         
-    if conta.saldo < valor:
-        raise ValueError("Saldo insuficiente.")
-        
-    conta.saldo -= valor
-    db.session.commit() # O bloqueio é liberado no commit
-    return conta.saldo
+        return {"sucesso": True, "novo_saldo": novo_saldo}
+
+    def __validar_cliente(self, cliente_id: int):
+        account = self.__cpf_repository.get_account(cliente_id)
+        if not account:
+            raise HttpNotFound("Conta não encontrada.")
+        return account
+
+    def __saldo_suficiente(self, cliente_id: int, valor_saque: float):
+        saldo_atual = self.__cpf_repository.get_saldo(cliente_id)
+
+        if saldo_atual < valor_saque:
+            raise HttpForbidden("Saldo insuficiente")
+
+        if valor_saque <= 0:
+            raise HttpBadRequest("Valor deve ser maior que zero")
+
+        return {"sucesso": True, "novo_saldo": saldo_atual - valor_saque}
+
+    def __limite_saque(self, valor_saque: float):
+        if valor_saque > float(1000.0):
+            raise HttpForbidden("Valor de saque excede o limite!")
+        return None
+
+    def extrato(self, cliente_id: int) -> dict:
+        self.__validar_cliente(cliente_id)
+        saldo = self.__cpf_repository.get_saldo(cliente_id)
+
+        return {"mensagem": "Saldo atual da conta", "saldo": saldo}
 ```
-Isso garante a segurança física do saldo, uma vez que a segunda requisição ficará aguardando na fila do banco de dados até que a primeira complete e atualize o saldo real, rejeitando o segundo saque por falta de fundos.
+
+Essa estrutura garante clareza de responsabilidades no padrão MVC, testabilidade unitária e tratamento padronizado de exceções.

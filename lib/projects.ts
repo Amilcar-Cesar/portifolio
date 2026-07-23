@@ -24,7 +24,7 @@ export const projects: Project[] = [
     description: "Sistema SaaS projetado para gerenciar consultas, faturamento e prontuários eletrônicos de pacientes (PEP) para clínicas de fisioterapia, com alertas de reserva em tempo real.",
     tags: ["fastapi", "vite", "react", "supabase"],
     githubUrl: "https://github.com/Amilcar-Cesar/fisiovita",
-    deployUrl: "https://fisiovita-demo.vercel.app",
+    deployUrl: "https://fisiovita-medic.vercel.app",
     featured: false,
     coverImage: "/projects/fisiovita/dashboard-recepcao.png",
     images: [

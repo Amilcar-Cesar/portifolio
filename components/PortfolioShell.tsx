@@ -517,7 +517,7 @@ export default function PortfolioShell({ projects, projectCases }: PortfolioShel
               github
             </a>
             <a
-              href="mailto:contato@amilcar.dev"
+              href="mailto:amilcarcesar0@yahoo.com.br"
               className="inline-flex items-center gap-2 px-3 py-1.5 border border-border rounded-xl hover:bg-border/20 hover:text-text hover:border-accent transition-all text-xs"
             >
               <Mail className="h-3.5 w-3.5" />

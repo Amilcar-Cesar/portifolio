@@ -1,81 +1,23 @@
-# API de entregas
+# API de Entregas (Clean Architecture & JWT)
 
-## O problema
-A gestão de rotas de entregas, atribuição de pedidos a motoristas e autenticação segura de motoboys e clientes em trânsito exige uma solução segura e de baixa latência. O objetivo do projeto foi construir uma API demonstrando arquitetura limpa com controle de acessos flexível baseado em JSON Web Tokens (JWT) para garantir que apenas entregadores autorizados visualizem e aceitem rotas de entrega.
+Este projeto é um exercício prático para demonstrar princípios de arquitetura limpa, autenticação segura com JWT e boas práticas voltadas para escalabilidade e manutenibilidade, desenvolvido como material de portfólio.
 
-## A arquitetura
-Abaixo está o fluxo da requisição HTTP autenticada pelo gateway de segurança do app:
+> **Status:** Projeto de estudo / portfólio — desenvolvimento end-to-end (design, implementação, testes e documentação).
 
-```xml
-<svg viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full my-6 bg-border/5 border border-border rounded p-4">
-  <!-- Client (Authenticated) -->
-  <rect x="50" y="90" width="120" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="1.5" />
-  <text x="110" y="125" text-anchor="middle" fill="currentColor" font-family="monospace" font-size="12">Cliente HTTP (JWT)</text>
+## Resumo Executivo
+- **Papel do autor:** Desenvolvimento end-to-end — arquitetura, implementação, testes e documentação.
+- **Foco técnico:** Autenticação com JWT, hashing seguro de senhas, design orientado a interfaces e alta testabilidade.
+- **Valor demonstrado:** Decisões arquiteturais que favorecem escalabilidade horizontal, substituibilidade de componentes e cobertura de testes.
 
-  <!-- JWT Middleware & Controller (Flask) -->
-  <rect x="290" y="90" width="220" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="1.5" />
-  <text x="400" y="125" text-anchor="middle" fill="currentColor" font-family="monospace" font-size="12">Flask App (JWT / MVC)</text>
+## Arquitetura & Padrões Aplicados
 
-  <!-- Database (SQLite) -->
-  <rect x="630" y="90" width="120" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="1.5" />
-  <text x="690" y="125" text-anchor="middle" fill="currentColor" font-family="monospace" font-size="12">SQLite Database</text>
+- **Separação em Camadas:** Divisão rigorosa entre `controllers` (casos de uso), `drivers` (infraestrutura), `models` (domínio/interfaces) e `views` (adapters HTTP).
+- **Injeção de Dependência via Composers:** Uso do padrão factory (`src/main/composer`) para compor dependências e instanciar controllers sem acoplamento direto.
+- **Design Baseado em Interfaces:** Contratos definidos em `src/models/interfaces`, permitindo mocks limpos em testes e fácil substituição de componentes.
 
-  <!-- Connectors -->
-  <path d="M 170 120 L 290 120" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" />
-  <path d="M 510 120 L 630 120" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" />
+## Destaques Técnicos & Segurança
 
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 2 L 8 5 L 0 8 z" fill="currentColor" />
-    </marker>
-  </defs>
-</svg>
-```
-
-## Stack tecnológica e decisões
-- **Flask**: Framework leve que permite organizar o projeto utilizando o padrão MVC e estender funcionalidades sem inchaço de pacotes.
-- **JWT (PyJWT)**: Autenticação stateless baseada em tokens. Essencial para aplicações móveis de entrega, pois dispensa sessões no servidor e lida facilmente com redes instáveis.
-- **SQLite**: Banco de dados relacional em arquivo local, perfeito para um ambiente de desenvolvimento rápido e demonstração leve e portável do projeto.
-
-## Desafio técnico e solução
-**O desafio: interceptação de rotas e segurança de acessos baseada em papéis (Role-Based Access Control)**
-Garantir que um entregador não possa acessar as rotas atribuídas a outro entregador, e que clientes não possam alterar o status de entrega das ordens.
-
-**A solução:**
-Criação de um decorador de autenticação personalizado em Flask para verificar e decodificar o token JWT recebido no cabeçalho `Authorization`, extraindo a identidade e a role (papel) do usuário:
-
-```python
-# decorators.py
-from functools import wraps
-from flask import request, jsonify
-import jwt
-from config import SECRET_KEY
-
-def token_required(allowed_roles=None):
-    def decorator(f):
-        @wraps(f)
-        def decorated(*args, **kwargs):
-            token = None
-            if 'Authorization' in request.headers:
-                auth_header = request.headers['Authorization']
-                if auth_header.startswith("Bearer "):
-                    token = auth_header.split(" ")[1]
-
-            if not token:
-                return jsonify({'message': 'Token ausente.'}), 401
-
-            try:
-                data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-                current_user = data['user_id']
-                user_role = data.get('role')
-            except Exception:
-                return jsonify({'message': 'Token inválido ou expirado.'}), 401
-
-            if allowed_roles and user_role not in allowed_roles:
-                return jsonify({'message': 'Acesso não autorizado.'}), 403
-
-            return f(current_user, *args, **kwargs)
-        return decorated
-    return decorator
-```
-Esse mecanismo garantiu controle de acesso centralizado e proteção robusta das rotas de entrega.
+- **Validação Centralizada de JWT:** Gerenciamento de tokens em `src/drivers/jwt_handler.py` com validação de assinatura e expiração via middleware em `src/main/middleware/auth_jwt.py`.
+- **Hashing Seguro de Senhas:** Hashing de senhas encapsulado em `src/drivers/password_handler.py`, mantendo a segurança dos dados dos usuários.
+- **Claims e Expiração:** Tokens JWT assinados por segredo via variável de ambiente, utilizando os claims `sub` (subject) e `exp` (expiração curta por padrão).
+- **Testabilidade Isolada:** Arquitetura desacoplada que facilita a criação de testes de unidade e integração com suítes rápidas e independentes de banco.
