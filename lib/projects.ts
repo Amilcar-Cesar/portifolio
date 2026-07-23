@@ -25,7 +25,7 @@ export const projects: Project[] = [
     tags: ["fastapi", "vite", "react", "supabase"],
     githubUrl: "https://github.com/Amilcar-Cesar/fisiovita",
     deployUrl: "https://fisiovita-medic.vercel.app",
-    featured: false,
+    featured: true,
     coverImage: "/projects/fisiovita/dashboard-recepcao.png",
     images: [
       {
